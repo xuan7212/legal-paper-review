@@ -101,7 +101,7 @@ export default function App() {
         </span>
         {!collapsed && (
           <div>
-            <strong>律稿</strong>
+            <strong>法学论衡</strong>
             <small>法学论文审查助手</small>
           </div>
         )}

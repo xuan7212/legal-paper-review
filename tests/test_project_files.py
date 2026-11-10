@@ -30,6 +30,18 @@ class DemoParser(HTMLParser):
 
 
 class ProjectFilesTests(unittest.TestCase):
+    def test_application_name_is_consistent(self):
+        for relative_path in (
+            "apps/web/index.html",
+            "apps/web/src/App.tsx",
+            "apps/server/src/index.ts",
+            "README.md",
+        ):
+            with self.subTest(path=relative_path):
+                source = (PROJECT_ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn("法学论衡", source)
+                self.assertNotIn("律稿", source)
+
     def test_version_delivery_rules_are_documented(self):
         instructions = (PROJECT_ROOT / "AGENTS.md").read_text(encoding="utf-8")
         self.assertIn("每轮完成并通过验证的修改为一个版本", instructions)

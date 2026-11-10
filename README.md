@@ -1,4 +1,4 @@
-# 律稿 · 法学论文审查助手
+# 法学论衡 · 法学论文审查助手
 
 根据产品设计文档和技术方案实现的 Web MVP，采用 React、TypeScript、Vite、Tailwind CSS、Fastify 和 DeepSeek。支持论文输入与文件解析、研究问题确认、逻辑与表达审查、逐段修改、多轮复查、材料和反馈、历史报告复制。
 

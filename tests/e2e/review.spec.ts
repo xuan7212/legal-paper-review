@@ -7,6 +7,8 @@ test("浏览器完成配置、初审、采纳修改、复查与轮次报告", as
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
+  await expect(page).toHaveTitle("法学论衡 · 论文论证与表达审查");
+  await expect(page.locator(".brand strong")).toHaveText("法学论衡");
   await expect(
     page.getByRole("heading", { name: "让论证更经得起推敲。" }),
   ).toBeVisible();
