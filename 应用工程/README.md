@@ -30,6 +30,10 @@
 
 ## 本地启动
 
+macOS 可直接双击本目录中的 [启动法学论衡.command](启动法学论衡.command)。已有服务会直接打开；首次启动会在依赖安装完成的情况下生成构建文件。请保留启动窗口，使用结束后按 Control+C 停止本次启动的服务。
+
+`apps/web/index.html` 与 `dist/client/index.html` 通过本地服务加载应用。直接双击 HTML 时会显示启动说明；服务就绪后可点击说明页中的“打开法学论衡”进入工作台。
+
 以下命令在“应用工程”目录内执行。从项目根目录进入时，先运行 `cd 应用工程`。
 
 准备 Node.js 22.13 及以上版本，以及 pnpm 11.25。旧版 Word 解析需要 LibreOffice，其 `soffice` 命令应在 PATH 中，也可通过 `SOFFICE_BIN` 指定可执行文件。
@@ -80,6 +84,7 @@ pnpm test:e2e
 ```text
 应用工程/
 ├── README.md                工程运行、演示与验证说明
+├── 启动法学论衡.command     macOS 双击启动入口
 ├── apps/
 │   ├── web/                 前端工作台
 │   └── server/              后端接口与审查流程

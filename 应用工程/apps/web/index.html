@@ -10,9 +10,78 @@
       content="法学论文提交导师前的论证与表达审查工作台"
     />
     <title>法学论衡 · 论文论证与表达审查</title>
+    <style>
+      #file-entry[hidden] {
+        display: none;
+      }
+      #file-entry {
+        box-sizing: border-box;
+        max-width: 640px;
+        margin: 12vh auto;
+        padding: 38px;
+        border: 1px solid #dce5dc;
+        border-radius: 18px;
+        background: white;
+        color: #294635;
+        font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        line-height: 1.9;
+        box-shadow: 0 16px 50px #203b2710;
+      }
+      #file-entry h1 {
+        font-family: "Songti SC", serif;
+        font-size: 30px;
+        line-height: 1.5;
+      }
+      #file-entry .entry-label {
+        font-size: 12px;
+        letter-spacing: 2px;
+        color: #65826b;
+      }
+      #file-entry p {
+        font-size: 14px;
+      }
+      #file-entry a {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 10px 18px;
+        border-radius: 9px;
+        background: #247562;
+        color: white;
+        text-decoration: none;
+      }
+      #file-entry small {
+        display: block;
+        margin-top: 20px;
+        color: #6e7e75;
+      }
+      body.file-mode {
+        margin: 18px;
+        background: #f5f6f2;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <section id="file-entry" hidden>
+      <p class="entry-label">法学论衡 · 启动说明</p>
+      <h1>打开论文审查工作台</h1>
+      <p>
+        请在“应用工程”文件夹中双击“启动法学论衡.command”。启动完成后，浏览器会自动打开应用。
+      </p>
+      <p>如果服务已经启动，可点击下方按钮进入工作台。</p>
+      <a href="http://127.0.0.1:3001/">打开法学论衡</a>
+      <small
+        >应用通过本地服务加载页面和文件审查功能。请保留启动窗口，使用结束后按
+        Control+C 停止服务。</small
+      >
+    </section>
+    <script>
+      if (window.location.protocol === "file:") {
+        document.body.classList.add("file-mode");
+        document.getElementById("root").hidden = true;
+        document.getElementById("file-entry").hidden = false;
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
