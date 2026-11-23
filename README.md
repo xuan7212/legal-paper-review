@@ -75,6 +75,32 @@ pnpm test:e2e
 
 ## 项目文件
 
-- `apps/web` 与 `apps/server` 为本次 Web 应用的当前实现。
-- `产品设计文档.md` 与 `docs/技术方案.md` 保存前期设计依据，当前交付能力和演示方式以本 README 及应用中的“项目说明”为准。
-- `法学论文审查助手-Demo.html` 为早期独立交互原型，保留用于版本追溯。
+```text
+法律agent/
+├── README.md                项目介绍、演示与运行说明
+├── AGENTS.md                开发、测试与版本交付约定
+├── apps/
+│   ├── web/                 前端工作台
+│   └── server/              后端接口与审查流程
+├── packages/shared/         共享数据结构与文本处理
+├── config/                  Vite、Vitest、Playwright 配置
+├── docs/                    产品设计与技术方案
+├── archive/                 早期独立 HTML 原型
+├── tests/
+│   ├── unit/                业务、接口与组件测试
+│   ├── e2e/                 浏览器流程测试
+│   ├── docs/                文档与目录引用检查
+│   └── support/             测试服务入口与响应替身
+├── scripts/                 构建脚本
+├── artifacts/               自动生成的测试记录与截图
+├── dist/                    自动生成的前后端构建文件
+├── node_modules/            本地安装的依赖
+├── package.json             项目命令与依赖声明
+├── pnpm-lock.yaml           依赖版本锁定
+├── pnpm-workspace.yaml      工作区与依赖构建约定
+└── tsconfig.json            TypeScript 项目入口
+```
+
+阅读产品背景可打开 [产品设计文档](docs/产品设计文档.md)，技术实现依据见 [技术方案](docs/技术方案.md)。两份文档保存前期设计依据，当前交付能力和演示方式以本 README 及应用中的“项目说明”为准。[早期 HTML 原型](archive/法学论文审查助手-Demo.html) 保存在 archive 中，用于版本追溯。
+
+测试命令会将浏览器记录及截图输出至 artifacts/test-results。artifacts、dist 和 node_modules 均由工具生成，并通过 Git 忽略规则排除。文档检查使用 Python 的无字节码模式运行。

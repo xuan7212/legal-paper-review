@@ -3,10 +3,12 @@
 from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
+import re
 import unittest
+from urllib.parse import unquote
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class DemoParser(HTMLParser):
@@ -30,6 +32,22 @@ class DemoParser(HTMLParser):
 
 
 class ProjectFilesTests(unittest.TestCase):
+    def test_documentation_links_resolve_after_directory_reorganization(self):
+        for relative_path in (
+            "README.md",
+            "docs/产品设计文档.md",
+            "docs/技术方案.md",
+        ):
+            document = PROJECT_ROOT / relative_path
+            links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", document.read_text(encoding="utf-8"))
+            self.assertTrue(links, f"{relative_path} 应提供文档导航")
+            for link in links:
+                if "://" in link or link.startswith("#"):
+                    continue
+                target = document.parent / unquote(link.split("#", 1)[0])
+                with self.subTest(document=relative_path, link=link):
+                    self.assertTrue(target.is_file(), f"链接目标不存在：{target}")
+
     def test_application_name_is_consistent(self):
         for relative_path in (
             "apps/web/index.html",
@@ -49,7 +67,7 @@ class ProjectFilesTests(unittest.TestCase):
         self.assertIn("git log --graph --oneline --decorate --all", instructions)
 
     def test_demo_contains_complete_document_and_app_entry(self):
-        source = (PROJECT_ROOT / "法学论文审查助手-Demo.html").read_text(
+        source = (PROJECT_ROOT / "archive" / "法学论文审查助手-Demo.html").read_text(
             encoding="utf-8"
         )
         parser = DemoParser()

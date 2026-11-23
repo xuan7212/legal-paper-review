@@ -5,7 +5,7 @@ import re
 import unittest
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 class TechnicalPlanTests(unittest.TestCase):
@@ -14,7 +14,7 @@ class TechnicalPlanTests(unittest.TestCase):
         cls.plan = (PROJECT_ROOT / "docs" / "技术方案.md").read_text(
             encoding="utf-8"
         )
-        cls.product = (PROJECT_ROOT / "产品设计文档.md").read_text(encoding="utf-8")
+        cls.product = (PROJECT_ROOT / "docs" / "产品设计文档.md").read_text(encoding="utf-8")
 
     def test_plan_has_version_basis_and_implementation_sections(self):
         self.assertIn("版本 v0.1 · Web MVP", self.plan)

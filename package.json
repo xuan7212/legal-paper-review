@@ -8,12 +8,12 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "concurrently -k \"tsx watch apps/server/src/index.ts\" \"vite --host 127.0.0.1\"",
-    "build": "tsc --noEmit && vite build && node scripts/build-server.mjs",
+    "dev": "concurrently -k \"tsx watch apps/server/src/index.ts\" \"vite --config config/vite.config.ts --host 127.0.0.1\"",
+    "build": "tsc --noEmit && vite build --config config/vite.config.ts && node scripts/build-server.mjs",
     "start": "node dist/server/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run && python3 -m unittest discover -s tests -v",
-    "test:e2e": "playwright test",
+    "test": "vitest run --config config/vitest.config.ts && python3 -B -m unittest discover -s tests -v",
+    "test:e2e": "playwright test --config config/playwright.config.ts",
     "verify": "pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e"
   },
   "dependencies": {
