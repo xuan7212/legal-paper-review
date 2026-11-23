@@ -8,12 +8,50 @@ import {
   reportFor,
   KEY_TTL,
   reviewSchema,
+  isDirty,
 } from "../../packages/shared/src/domain";
 import { example } from "../../packages/shared/src/example";
 import { FakeProvider } from "../support/fake-provider";
 import { blankWorkspace, type Round } from "../../packages/shared/src/domain";
 
 describe("文本、锚点与报告", () => {
+  it("反馈和背景资料修改可触发复查，报告保留修改后的工作副本", () => {
+    const workspace = blankWorkspace("workspace");
+    const round: Round = {
+      ...workspace,
+      confirmed: { question: "问题", claims: ["观点"], arguments: [] },
+      roundId: "round",
+      no: 1,
+      issues: [],
+      results: {},
+      model: "deepseek-chat",
+      promptVersion: "1",
+      schemaVersion: "1",
+      createdAt: Date.now(),
+    };
+    workspace.confirmed = structuredClone(round.confirmed);
+    expect(isDirty(workspace, round)).toBe(false);
+    for (const patch of [
+      { refs: "补充的条文" },
+      { outline: "新提纲" },
+      { question: "新的背景问题" },
+      {
+        feedback: { L1: { value: "判断不成立" as const, reason: "已有论据" } },
+      },
+    ])
+      expect(isDirty({ ...workspace, ...patch }, round)).toBe(true);
+    const report = reportFor(round, {
+      ...workspace,
+      paragraphs: [{ id: "p1", text: "修改后的论文正文" }],
+    });
+    expect(report).toContain("当前工作副本文本");
+    expect(report).toContain("修改后的论文正文");
+    expect(report).toContain("北京时间");
+    expect(reportFor({ ...round, source: "demo" })).toContain("预设示例演示");
+    expect(reportFor({ ...round, source: "demo" })).not.toContain(
+      "模型 deepseek-chat",
+    );
+  });
   it("按空白分段、UTF-16 计数，覆盖 1500 和 5000 边界", () => {
     expect(countText(" 法\n学 😀 ")).toBe(4);
     expect(paragraphsFrom(" 段一\n\n段二 ")).toEqual([

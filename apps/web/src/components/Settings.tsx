@@ -210,9 +210,10 @@ export function Settings({ onClose }: { onClose: () => void }) {
             <div className="notice">
               <ShieldCheck size={18} />
               <p>
-                密钥通过加密连接提交服务端并保存在会话内存，2
+                密钥提交至当前应用服务端并保存在会话内存，2
                 小时后清除。论文与记录仅用于当前会话。关闭或刷新页面将重置工作区，遗留服务端会话最多保留至最后有效操作后
-                2 小时。
+                2 小时。公网部署需配置 HTTPS，模型请求通过 HTTPS 发送至
+                DeepSeek。
               </p>
             </div>
           </>

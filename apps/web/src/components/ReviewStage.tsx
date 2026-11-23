@@ -8,10 +8,13 @@ import {
   MessageSquare,
   LocateFixed,
   Copy,
+  ArrowRight,
+  AlertCircle,
 } from "lucide-react";
 import {
   anchorMatches,
   resolveAnchor,
+  isDirty,
   type Issue,
   type Paragraph,
   type Round,
@@ -58,7 +61,10 @@ function ParagraphEditor({
         tabIndex={0}
         role="button"
         onKeyDown={(e) => {
-          if (e.key === "Enter") onSelect(range.issue.id);
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect(range.issue.id);
+          }
         }}
       >
         {range.quote}
@@ -140,6 +146,7 @@ export function ReviewStage({
   const paragraphs = latest ? state.workspace.paragraphs : round.paragraphs;
   const materials = latest ? state.workspace.materials : round.materials;
   const feedback = latest ? state.workspace.feedback : round.feedback;
+  const dirty = latest && isDirty(state.workspace, round);
   const [tab, setTab] = useState("logic");
   const [filter, setFilter] = useState("全部");
   const [selected, setSelected] = useState("");
@@ -290,7 +297,20 @@ export function ReviewStage({
             {!issues.length && (
               <p>未发现明显的论证或表达问题，请结合导师意见复核。</p>
             )}
+            <div className="summary-note">
+              {round.source === "demo"
+                ? "预设教学样本 · 点击右侧问题可定位原文"
+                : "原文引用已完成程序校验 · 学术争议与外部材料由作者复核"}
+            </div>
           </div>
+          {dirty && (
+            <div className="dirty-notice" role="status">
+              <AlertCircle size={16} />
+              <span>
+                工作副本已更新。完成修改后，请点击“修改后复查”核对问题。
+              </span>
+            </div>
+          )}
           <h1>{round.title}</h1>
           <div className="paper-meta">
             第 {round.no} 轮 · {paragraphs.length} 段 ·{" "}
@@ -298,7 +318,9 @@ export function ReviewStage({
               hour: "2-digit",
               minute: "2-digit",
             })}
-            <span>{latest ? "悬停或点击段落即可编辑" : "历史版本 · 只读"}</span>
+            <span>
+              {latest ? "悬停或使用段落编辑按钮修改" : "历史版本 · 只读"}
+            </span>
           </div>
           <div className="round-picker">
             {state.rounds.map((r, i) => (
@@ -332,6 +354,20 @@ export function ReviewStage({
       <aside
         className={`review-panel ${mobile === "cards" ? "mobile-visible" : ""}`}
       >
+        <div className="panel-heading">
+          <div>
+            <span className="eyebrow">REVIEW NOTES</span>
+            <h2>审查建议</h2>
+          </div>
+          <span className="panel-total">
+            {
+              issues.filter((i) => round.results[i.id]?.state !== "已解决")
+                .length
+            }{" "}
+            项待处理
+          </span>
+        </div>
+        <p className="panel-intro">先查看高优先级问题，再沿着原文核对依据。</p>
         <div className="panel-tabs">
           {[
             [
@@ -631,6 +667,18 @@ export function ReviewStage({
                         )}
                       </div>
                     </div>
+                  )}
+                  {selected !== issue.id && (
+                    <button
+                      className="issue-preview"
+                      onClick={() => selectCard(issue.id)}
+                    >
+                      <span>{issue.explanation}</span>
+                      <small>
+                        查看依据与修改方向
+                        <ArrowRight size={12} />
+                      </small>
+                    </button>
                   )}
                 </article>
               ))}

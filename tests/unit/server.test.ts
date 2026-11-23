@@ -91,6 +91,7 @@ describe("真实入口与会话任务一致性", () => {
     await test.prepare();
     const first = await test.start("/reviews");
     expect(first.status).toBe("succeeded");
+    expect(first.result.source).toBe("model");
     const initial = await test.load();
     const quote = first.result.issues[0].anchors[0].quote;
     await test.save({

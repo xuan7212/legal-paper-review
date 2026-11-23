@@ -107,6 +107,7 @@ export type Model = z.infer<typeof modelSchema>;
 export type WorkspaceInput = z.infer<typeof workspaceInputSchema>;
 export type Workspace = WorkspaceInput & { workspaceId: string };
 export type Round = Review & {
+  source?: "demo" | "model";
   roundId: string;
   no: number;
   paragraphs: Paragraph[];
@@ -290,7 +291,20 @@ export function isDirty(workspace: Workspace, round: Round) {
       workspace.paragraphs,
       workspace.confirmed,
       workspace.materials,
-    ]) !== JSON.stringify([round.paragraphs, round.confirmed, round.materials])
+      workspace.question,
+      workspace.outline,
+      workspace.refs,
+      workspace.feedback,
+    ]) !==
+    JSON.stringify([
+      round.paragraphs,
+      round.confirmed,
+      round.materials,
+      round.question,
+      round.outline,
+      round.refs,
+      round.feedback,
+    ])
   );
 }
 
@@ -299,11 +313,24 @@ export function reportFor(round: Round, current?: Workspace) {
     "法学论文审查报告",
     "",
     round.title,
-    `第 ${round.no} 轮 · 模型 ${round.model}`,
+    round.source === "demo"
+      ? `第 ${round.no} 轮 · 预设示例演示（固定审查内容与规则复查）`
+      : `第 ${round.no} 轮 · 模型 ${round.model}`,
+    `生成时间：${new Date(round.createdAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}（北京时间）`,
     `审查范围：第 1—${round.paragraphs.length} 段，共 ${countText(round.paragraphs.map((p) => p.text).join(""))} 字`,
     `研究问题：${round.confirmed.question}`,
     "核心观点",
     ...round.confirmed.claims.map((c) => `- ${c}`),
+    "",
+    "主要论据与待补信息",
+    ...round.confirmed.arguments.map((argument) => {
+      const positions = argument.paragraphIds.map(
+        (id) => round.paragraphs.findIndex((p) => p.id === id) + 1,
+      );
+      return `- ${argument.text}（第 ${positions.join("、")} 段）${argument.pending ? ` · 待补充：${argument.pending}` : ""}`;
+    }),
+    ...(round.outline ? ["", "论文提纲", round.outline] : []),
+    ...(round.refs ? ["", "作者提供的引用材料", round.refs] : []),
     "",
     "主要问题与表达修改",
   ];
@@ -338,17 +365,31 @@ export function reportFor(round: Round, current?: Workspace) {
   if (current) {
     lines.push(
       "",
-      "当前工作副本附录（尚待复查）",
       isDirty(current, round)
-        ? "正文、审查依据或材料状态已修改，报告主体对应上一已审查版本。"
+        ? "当前工作副本附录（尚待复查）"
+        : "当前工作副本附录（与本轮一致）",
+      isDirty(current, round)
+        ? "正文、审查依据、背景、材料或反馈已修改，报告主体对应上一已审查版本。"
         : "正文与审查依据对应本轮已审查版本。",
+      `当前研究问题：${current.confirmed?.question || "待确认"}`,
+      ...(current.confirmed?.claims || []).map((claim) => `- ${claim}`),
+      ...(current.outline ? ["当前提纲", current.outline] : []),
+      ...(current.refs ? ["当前引用材料", current.refs] : []),
       ...current.materials.map((m) => `[${m.done ? "x" : " "}] ${m.text}`),
       ...Object.entries(current.feedback).map(
         ([id, f]) => `${id} · ${f.value} ${f.reason}`,
       ),
+      "",
+      "当前工作副本文本",
+      ...current.paragraphs.map(
+        (p, index) => `第 ${index + 1} 段\n${p.text}\n`,
+      ),
     );
   }
   lines.push(
+    "",
+    "本轮审查文本",
+    ...round.paragraphs.map((p, index) => `第 ${index + 1} 段\n${p.text}\n`),
     "",
     "学术争议及外部材料待核验事项由作者核对。本报告仅依据所列输入范围。",
   );

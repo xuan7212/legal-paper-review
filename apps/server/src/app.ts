@@ -22,6 +22,7 @@ import { Store, publicJob, type Session, type Job } from "./reviews/store.js";
 import { DeepSeekProvider, type ModelProvider } from "./agent/provider.js";
 import { runAgent, assertCurrent } from "./agent/workflow.js";
 import { parseFile, validateUpload } from "./files/parse.js";
+import { demoRound, demoWorkspace } from "./reviews/demo.js";
 
 export function buildApp(
   options: {
@@ -209,6 +210,40 @@ export function buildApp(
     store.reset(session);
     return session.workspace;
   });
+  app.post("/api/demo", async (request) => {
+    const session = sessionFor(request.headers);
+    store.reset(session);
+    session.workspace = demoWorkspace(session.workspace);
+    session.rounds = [demoRound(session.workspace, store.now())];
+    return { workspace: session.workspace, rounds: session.rounds };
+  });
+  app.post("/api/demo/rechecks", async (request) => {
+    const session = sessionFor(request.headers);
+    const body = z
+      .object({ workspaceId: z.string(), revision: z.number().int() })
+      .parse(request.body);
+    if (
+      body.workspaceId !== session.workspace.workspaceId ||
+      body.revision !== session.workspace.revision
+    )
+      throw new AppError("REVISION", "工作区已更新，请重新加载", 409);
+    const previous = session.rounds.at(-1);
+    if (previous?.source !== "demo")
+      throw new AppError("DEMO_REQUIRED", "请先进入示例演示", 409);
+    if (session.rounds.length >= 30)
+      throw new AppError("WORKSPACE_LIMIT", "请导出报告后新建审查", 429);
+    if (!isDirty(session.workspace, previous))
+      throw new AppError("NO_CHANGES", "请先修改示例正文、材料或反馈");
+    try {
+      validateText(session.workspace.paragraphs);
+    } catch (error) {
+      throw new AppError("TEXT_LENGTH", (error as Error).message);
+    }
+    session.rounds.push(demoRound(session.workspace, store.now(), previous));
+    session.workspace.revision++;
+    session.activeAt = store.now();
+    return { workspace: session.workspace, rounds: session.rounds };
+  });
 
   async function execute(
     job: Job,
@@ -363,6 +398,12 @@ export function buildApp(
   ] as const) {
     app.post(`/api/${route}`, async (request) => {
       const session = sessionFor(request.headers);
+      if (session.rounds.at(-1)?.source === "demo")
+        throw new AppError(
+          "DEMO_ACTIVE",
+          "当前为预设示例，请新建审查后使用真实模型",
+          409,
+        );
       const body = z
         .object({
           retryJobId: z.string().optional(),

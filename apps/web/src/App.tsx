@@ -14,6 +14,9 @@ import {
   ShieldCheck,
   X,
   LoaderCircle,
+  CircleHelp,
+  Download,
+  Play,
 } from "lucide-react";
 import {
   countText,
@@ -21,15 +24,16 @@ import {
   type Basis,
 } from "../../../packages/shared/src/domain";
 import { useWorkspace } from "./state";
-import { copyText } from "./api";
+import { copyText, downloadReport } from "./api";
 import { InputStage } from "./components/InputStage";
 import { Settings } from "./components/Settings";
 import { Modal } from "./components/Modal";
 import { BasisEditor } from "./components/BasisEditor";
 import { ReviewStage } from "./components/ReviewStage";
+import { ProjectOverview } from "./components/ProjectOverview";
 
 export default function App() {
-  const { state, dispatch, api, save, run, cancel, reset, notify } =
+  const { state, dispatch, api, save, run, cancel, reset, startDemo, notify } =
     useWorkspace();
   const [collapsed, setCollapsed] = useState(false);
   const [drawer, setDrawer] = useState(false);
@@ -50,6 +54,7 @@ export default function App() {
   }, [state.extracted]);
   const round = state.rounds[index];
   const latest = state.rounds.at(-1);
+  const demo = latest?.source === "demo";
   const running =
     state.job?.status === "running" || state.job?.status === "queued";
   const progress = running
@@ -132,6 +137,7 @@ export default function App() {
         >
           <Files size={17} />
           {!collapsed && "查重率检测"}
+          {!collapsed && <span className="pending-badge">待接入</span>}
         </button>
         <button
           className="nav-button"
@@ -143,19 +149,20 @@ export default function App() {
         >
           <ScanText size={17} />
           {!collapsed && "AI 率检测"}
+          {!collapsed && <span className="pending-badge">待接入</span>}
         </button>
       </div>
       {!collapsed && (
         <div className="recent">
           <p>当前会话</p>
-          <button className="recent-item" title={state.workspace.title}>
+          <div className="recent-item" title={state.workspace.title}>
             {state.workspace.title || "新的论文审查"}
             <span>
               {state.rounds.length
                 ? `${state.rounds.length} 轮审查记录`
                 : "等待输入论文"}
             </span>
-          </button>
+          </div>
           <div className="sidebar-tip">
             <BookOpen size={17} />
             <p>从一个清晰的研究问题开始，让每一步判断都回到原文。</p>
@@ -163,6 +170,17 @@ export default function App() {
         </div>
       )}
       <div className="sidebar-bottom">
+        <button
+          className="nav-button"
+          aria-label="项目说明"
+          onClick={() => {
+            setModal("overview");
+            setDrawer(false);
+          }}
+        >
+          <CircleHelp size={17} />
+          {!collapsed && "项目说明"}
+        </button>
         <button
           className="nav-button"
           aria-label="设置"
@@ -174,7 +192,7 @@ export default function App() {
             className={`dot ${state.credentials.status === "ok" ? "connected" : ""}`}
           />
         </button>
-        {!collapsed && <small>当前会话 · 浏览器工作区</small>}
+        {!collapsed && <small>v0.2 · 法学论文审查工作台</small>}
       </div>
     </>
   );
@@ -201,8 +219,20 @@ export default function App() {
             <PanelLeft size={18} />
           </button>
           <div className="topbar-title">
-            {state.phase === "input" ? "论文审查工作台" : state.workspace.title}
+            <span className="workspace-label">工作台</span>
+            <span className="topbar-divider">/</span>
+            {state.phase === "input" ? "论文自查" : state.workspace.title}
           </div>
+          <span className={`connection-badge ${demo ? "demo" : ""}`}>
+            <span
+              className={`dot ${demo || state.credentials.status === "ok" ? "connected" : ""}`}
+            />
+            {demo
+              ? "示例演示"
+              : state.credentials.status === "ok"
+                ? "DeepSeek 已连接"
+                : "DeepSeek 待配置"}
+          </span>
           <div className="stepper">
             <div>
               {steps.map((step, i) => (
@@ -235,6 +265,7 @@ export default function App() {
               <button
                 className="secondary"
                 aria-label="复制报告"
+                disabled={state.busy}
                 onClick={() => void openReport().catch(notify)}
               >
                 <Copy size={14} />
@@ -247,7 +278,8 @@ export default function App() {
                   state.busy || !latest || !isDirty(state.workspace, latest)
                 }
                 onClick={() => {
-                  if (state.credentials.status !== "ok") setModal("settings");
+                  if (!demo && state.credentials.status !== "ok")
+                    setModal("settings");
                   else void run("recheck");
                 }}
               >
@@ -257,6 +289,23 @@ export default function App() {
             </div>
           )}
         </header>
+        {demo && (
+          <div className="demo-banner" role="status">
+            <Play size={15} />
+            <div>
+              <strong>预设示例演示</strong>
+              <span>体验定位、修改与规则复查。审查内容为预设样本。</span>
+            </div>
+            <button
+              className="text-button"
+              disabled={state.busy}
+              onClick={newReview}
+            >
+              新建真实审查
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        )}
         {state.error && (
           <div className="error-banner" role="alert">
             <span>{state.error}</span>
@@ -313,6 +362,7 @@ export default function App() {
             <InputStage
               key={state.workspace.workspaceId}
               onSettings={() => setModal("settings")}
+              onDemo={() => setModal("demo")}
             />
           )}
           {state.phase === "confirm" && (
@@ -358,6 +408,51 @@ export default function App() {
         </div>
       </main>
       {modal === "settings" && <Settings onClose={() => setModal("")} />}
+      {modal === "overview" && (
+        <ProjectOverview
+          onClose={() => setModal("")}
+          onDemo={() => setModal("demo")}
+        />
+      )}
+      {modal === "demo" && (
+        <Modal
+          title="体验预设示例"
+          subtitle="载入教学样本，体验完整的修改与复查流程。"
+          onClose={() => setModal("")}
+        >
+          <div className="modal-body demo-introduction">
+            <span className="demo-icon">
+              <Play size={24} />
+            </span>
+            <h3>从一个具体的论证缺口开始</h3>
+            <p>
+              示例包含 4 条论证问题、1
+              条表达建议和对应的待补材料。可以采纳参考句、编辑段落、提交反馈，并对照历史版本。
+            </p>
+            <p>
+              演示使用预设问题与固定复查规则。当前论文草稿和轮次将被替换，已配置的
+              API 保留。
+            </p>
+          </div>
+          <footer className="modal-footer">
+            <button className="secondary" onClick={() => setModal("")}>
+              取消
+            </button>
+            <button
+              className="primary"
+              disabled={state.busy || !state.ready}
+              onClick={() =>
+                void startDemo()
+                  .then(() => setModal(""))
+                  .catch(() => {})
+              }
+            >
+              进入示例演示
+              <ArrowRight size={15} />
+            </button>
+          </footer>
+        </Modal>
+      )}
       {modal === "basis" && (
         <Modal
           title="审查依据"
@@ -424,6 +519,13 @@ export default function App() {
               <ShieldCheck size={13} />
               报告排除 API Key 等凭据
             </small>
+            <button
+              className="secondary"
+              onClick={() => downloadReport(report, round!.no)}
+            >
+              <Download size={14} />
+              下载报告
+            </button>
             <button
               className="primary"
               onClick={() =>

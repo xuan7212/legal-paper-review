@@ -120,6 +120,7 @@ export async function runAgent(
   assertCurrent(job, session, store);
   const round: Round = {
     ...review,
+    source: "model",
     roundId: randomUUID(),
     no: session.rounds.length + 1,
     paragraphs: structuredClone(data.paragraphs),

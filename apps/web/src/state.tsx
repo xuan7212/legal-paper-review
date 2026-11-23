@@ -129,6 +129,25 @@ function useWorkspaceController() {
     dispatch({ busy: true, error: "" });
     let job: JobView;
     try {
+      if (
+        current.current.rounds.at(-1)?.source === "demo" &&
+        type === "recheck"
+      ) {
+        const workspace = current.current.workspace;
+        const data = await api.request<{
+          workspace: Workspace;
+          rounds: Round[];
+        }>("/demo/rechecks", {
+          method: "POST",
+          body: JSON.stringify({
+            workspaceId: workspace.workspaceId,
+            revision: workspace.revision,
+          }),
+        });
+        if (generation === epoch.current)
+          dispatch({ ...data, phase: "review", job: undefined });
+        return data.rounds.at(-1);
+      }
       const endpoint = {
         extract: "/extractions",
         review: "/reviews",
@@ -171,6 +190,12 @@ function useWorkspaceController() {
         await new Promise((resolve) => setTimeout(resolve, 1500));
         if (!alive.current || currentJob.current !== job.id) return;
         job = await api.request<JobView>(`/jobs/${job.id}`);
+        if (
+          generation !== epoch.current ||
+          currentJob.current !== job.id ||
+          !alive.current
+        )
+          return;
         dispatch({ job });
       }
     } catch (error) {
@@ -206,6 +231,29 @@ function useWorkspaceController() {
       busy: false,
     });
   };
+  const startDemo = async () => {
+    dispatch({ busy: true, error: "" });
+    try {
+      const data = await api.request<{ workspace: Workspace; rounds: Round[] }>(
+        "/demo",
+        { method: "POST" },
+      );
+      epoch.current++;
+      currentJob.current = undefined;
+      current.current = { ...current.current, ...data };
+      dispatch({
+        ...data,
+        phase: "review",
+        extracted: undefined,
+        job: undefined,
+      });
+    } catch (error) {
+      notify(error);
+      throw error;
+    } finally {
+      dispatch({ busy: false });
+    }
+  };
   return {
     state,
     api,
@@ -214,6 +262,7 @@ function useWorkspaceController() {
     run,
     cancel,
     reset,
+    startDemo,
     notify,
     refresh,
     credentials,

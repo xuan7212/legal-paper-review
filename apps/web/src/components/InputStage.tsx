@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import {
-  ArrowUp,
   FileUp,
   SlidersHorizontal,
   Sparkles,
@@ -8,6 +7,10 @@ import {
   FileText,
   X,
   ArrowRight,
+  GitCompareArrows,
+  LocateFixed,
+  Play,
+  Scale,
 } from "lucide-react";
 import {
   countText,
@@ -16,7 +19,13 @@ import {
 import { example } from "../../../../packages/shared/src/example";
 import { useWorkspace } from "../state";
 
-export function InputStage({ onSettings }: { onSettings: () => void }) {
+export function InputStage({
+  onSettings,
+  onDemo,
+}: {
+  onSettings: () => void;
+  onDemo: () => void;
+}) {
   const { state, save, run, notify } = useWorkspace();
   const [text, setText] = useState(
     state.workspace.paragraphs.map((p) => p.text).join("\n\n"),
@@ -69,6 +78,8 @@ export function InputStage({ onSettings }: { onSettings: () => void }) {
     setText(example.text);
     setTitle(example.title);
     setOutline(example.outline);
+    setQuestion("");
+    setRefs("");
     setFile("");
   };
   const upload = async (selected?: File) => {
@@ -103,25 +114,42 @@ export function InputStage({ onSettings }: { onSettings: () => void }) {
       <div className="intro">
         <div className="eyebrow">
           <span />
-          写作之后，再推敲一步
+          法学论文 · 论证与表达审查
         </div>
         <h1>
           让论证更经得起推敲<span>。</span>
         </h1>
         <p>提交导师前，梳理研究问题，找出论证缺口，完成有依据的修改。</p>
       </div>
+      <div className="capability-grid">
+        <div>
+          <Scale size={19} />
+          <strong>审查论证</strong>
+          <span>概念、论据与结论的衔接</span>
+        </div>
+        <div>
+          <LocateFixed size={19} />
+          <strong>回到原文</strong>
+          <span>定位问题，核对判断依据</span>
+        </div>
+        <div>
+          <GitCompareArrows size={19} />
+          <strong>追踪修改</strong>
+          <span>逐项复查，保留版本记录</span>
+        </div>
+      </div>
       <section className="example-card">
         <div className="example-heading">
           <span>
             <Sparkles size={16} />
-            一次完整的论文自查
+            预设案例 · 8 段法学论文
           </span>
           <button
             className="text-button"
             onClick={useExample}
             disabled={state.busy || !state.ready}
           >
-            用此示例开始 <ArrowRight size={15} />
+            载入示例正文 <ArrowRight size={15} />
           </button>
         </div>
         <h3>算法推荐场景下的单独同意规则</h3>
@@ -137,7 +165,22 @@ export function InputStage({ onSettings }: { onSettings: () => void }) {
           <ArrowRight size={14} />
           <span>逐项复查</span>
         </div>
+        <div className="example-demo-action">
+          <small>预设问题与规则复查 · 可直接体验修改流程</small>
+          <button
+            className="primary"
+            onClick={onDemo}
+            disabled={state.busy || !state.ready}
+          >
+            <Play size={14} />
+            体验示例演示
+          </button>
+        </div>
       </section>
+      <div className="composer-heading">
+        <h2>审查你的论文</h2>
+        <span>粘贴正文或上传文件，从一个完整论证片段开始</span>
+      </div>
       <section
         className={`composer ${dragging ? "dragging" : ""}`}
         aria-label="论文输入"
@@ -216,7 +259,9 @@ export function InputStage({ onSettings }: { onSettings: () => void }) {
         <textarea
           className="paper-input"
           aria-label="论文正文"
-          placeholder="粘贴论文片段，或拖入 PDF / Word 文件……"
+          placeholder={
+            "在这里粘贴 1500—5000 字的论文片段……\n\n保留段落与必要上下文，便于审查论点、论据和结论之间的关系。"
+          }
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={state.busy || !state.ready}
@@ -277,14 +322,24 @@ export function InputStage({ onSettings }: { onSettings: () => void }) {
             disabled={!valid || state.busy || !state.ready}
             onClick={() => void submit()}
           >
-            <ArrowUp size={21} />
+            <span>开始审查</span>
+            <ArrowRight size={16} />
           </button>
         </div>
       </section>
       <div className="input-meta">
-        <span className={count > 0 && !valid ? "warning-text" : ""}>
-          {count.toLocaleString()} 字 · {paragraphsFrom(text).length} 段 · 建议
-          1500—5000 字
+        <span
+          aria-live="polite"
+          className={count > 0 && !valid ? "warning-text" : ""}
+        >
+          {count.toLocaleString()} 字 · {paragraphsFrom(text).length} 段 ·{" "}
+          {count > 5000
+            ? `请精简 ${count - 5000} 字`
+            : count > 0 && count < 1500
+              ? `再补充 ${1500 - count} 字即可审查`
+              : valid
+                ? "已满足审查字数"
+                : "支持 1500—5000 字"}
         </span>
         <span>单文件最大 20 MB</span>
       </div>

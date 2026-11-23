@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 test("浏览器完成配置、初审、采纳修改、复查与轮次报告", async ({
   page,
@@ -13,7 +14,7 @@ test("浏览器完成配置、初审、采纳修改、复查与轮次报告", as
     page.getByRole("heading", { name: "让论证更经得起推敲。" }),
   ).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("input.png") });
-  await page.getByRole("button", { name: "用此示例开始" }).click();
+  await page.getByRole("button", { name: "载入示例正文" }).click();
   await expect(page.getByLabel("论文正文")).toHaveValue(/随着算法推荐技术/);
   await page.getByRole("button", { name: "开始审查", exact: true }).click();
   const settings = page.getByRole("dialog", { name: "设置", exact: true });
@@ -106,4 +107,131 @@ test("移动端上传实际文本、背景编辑与待接入检测", async ({ pa
     () => document.documentElement.scrollWidth > window.innerWidth,
   );
   expect(overflow).toBe(false);
+});
+
+test("交付演示无需密钥，项目说明、原文修改、版本及下载保持来源一致", async ({
+  page,
+}, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", { name: "体验示例演示", exact: true }),
+  ).toBeEnabled();
+  await page.screenshot({
+    path: testInfo.outputPath("final-home-desktop.png"),
+  });
+  await page.getByRole("button", { name: "项目说明", exact: true }).click();
+  const overview = page.getByRole("dialog", { name: "项目说明", exact: true });
+  await expect(overview).toContainText("本页人数为招募计划");
+  await expect(overview).toContainText("同一模型的通用提示词");
+  await overview.screenshot({
+    path: testInfo.outputPath("final-project-overview.png"),
+  });
+  await overview
+    .getByRole("button", { name: "体验示例演示", exact: true })
+    .click();
+  await page.getByRole("button", { name: "进入示例演示", exact: true }).click();
+  await expect(page.locator(".demo-banner")).toContainText("预设样本");
+  await expect(page.locator(".panel-total")).toHaveText("5 项待处理");
+  await page
+    .getByRole("button", { name: /三份判决难以支撑普遍性结论/ })
+    .click();
+  await expect(page.locator("#paragraph-p4")).toHaveClass(/related/);
+  await expect(page.locator("#paragraph-p4")).toBeInViewport();
+  await page.screenshot({
+    path: testInfo.outputPath("final-review-desktop.png"),
+  });
+  await page.getByRole("button", { name: "有帮助", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "修改后复查", exact: true }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "替换原句", exact: true }).click();
+  await expect(page.locator(".dirty-notice")).toBeVisible();
+  await page.getByRole("button", { name: "复制报告", exact: true }).click();
+  const report = page.getByRole("dialog", { name: "复制审查报告" });
+  await expect(report).toContainText("当前工作副本文本");
+  await expect(report).toContainText("就本文检索的判决而言");
+  const downloadPromise = page.waitForEvent("download");
+  await report.getByRole("button", { name: "下载报告", exact: true }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("法学论衡-第1轮审查报告.txt");
+  const contents = await readFile((await download.path())!, "utf8");
+  expect(contents).toContain("预设示例演示");
+  expect(contents).toContain("当前工作副本文本");
+  expect(contents).not.toContain("模型 deepseek-chat");
+  await report.getByLabel("关闭", { exact: true }).click();
+  await page.getByRole("button", { name: "修改后复查", exact: true }).click();
+  await expect(
+    page.getByText("第 2 轮复查完成", { exact: false }),
+  ).toBeVisible();
+  await expect(page.locator(".panel-total")).toHaveText("4 项待处理");
+  await expect(
+    page.getByRole("button", { name: "修改后复查", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "第 1 轮", exact: true }).click();
+  await expect(page.locator("#paragraph-p4")).toContainText(
+    "我国司法实践普遍忽视",
+  );
+  await expect(page.getByLabel("编辑第 4 段")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("交付页面在窄屏与平板中完整显示，示例及项目说明可操作", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/");
+  for (const width of [320, 390, 768, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(
+      page.getByRole("button", { name: "体验示例演示", exact: true }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(
+      await page
+        .locator(".main-content")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await page.screenshot({ path: testInfo.outputPath("final-home-mobile.png") });
+  await page.getByRole("button", { name: "打开菜单" }).click();
+  await page.getByRole("button", { name: "项目说明", exact: true }).click();
+  const overview = page.getByRole("dialog", { name: "项目说明", exact: true });
+  expect(
+    await overview.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth,
+    ),
+  ).toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(overview).toHaveCount(0);
+  await page.getByRole("button", { name: "体验示例演示", exact: true }).click();
+  await page.getByRole("button", { name: "进入示例演示", exact: true }).click();
+  await page.getByRole("button", { name: "问题 5", exact: true }).click();
+  await expect(page.locator(".review-panel")).toBeVisible();
+  await page
+    .getByRole("button", { name: /三份判决难以支撑普遍性结论/ })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "替换原句", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("final-review-mobile.png"),
+  });
+  expect(
+    await page
+      .locator(".review-panel")
+      .evaluate((element) => element.scrollWidth <= element.clientWidth),
+  ).toBe(true);
 });

@@ -67,3 +67,16 @@ export async function copyText(text: string) {
   textarea.remove();
   if (!copied) throw new Error("复制失败，请手动选择报告文本复制");
 }
+
+export function downloadReport(text: string, round: number) {
+  const url = URL.createObjectURL(
+    new Blob(["\uFEFF", text], { type: "text/plain;charset=utf-8" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `法学论衡-第${round}轮审查报告.txt`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
