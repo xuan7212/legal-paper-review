@@ -5,20 +5,21 @@ import re
 import unittest
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ENGINEERING_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = ENGINEERING_ROOT.parent
 
 
 class ProductDesignTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.design = (PROJECT_ROOT / "docs" / "产品设计文档.md").read_text(encoding="utf-8")
-        cls.demo = (PROJECT_ROOT / "archive" / "法学论文审查助手-Demo.html").read_text(
+        cls.design = (PROJECT_ROOT / "设计资料" / "产品设计文档.md").read_text(encoding="utf-8")
+        cls.demo = (PROJECT_ROOT / "历史归档" / "法学论文审查助手-Demo.html").read_text(
             encoding="utf-8"
         )
 
     def test_document_identifies_reference_and_version(self):
         self.assertIn("版本 v0.2", self.design)
-        self.assertIn("../archive/法学论文审查助手-Demo.html", self.design)
+        self.assertIn("../历史归档/法学论文审查助手-Demo.html", self.design)
         self.assertIn("## 八、MVP 验证与待确认事项", self.design)
 
     def test_input_limits_match_demo(self):

@@ -8,7 +8,8 @@ import unittest
 from urllib.parse import unquote
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ENGINEERING_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = ENGINEERING_ROOT.parent
 
 
 class DemoParser(HTMLParser):
@@ -35,8 +36,9 @@ class ProjectFilesTests(unittest.TestCase):
     def test_documentation_links_resolve_after_directory_reorganization(self):
         for relative_path in (
             "README.md",
-            "docs/产品设计文档.md",
-            "docs/技术方案.md",
+            "应用工程/README.md",
+            "设计资料/产品设计文档.md",
+            "设计资料/技术方案.md",
         ):
             document = PROJECT_ROOT / relative_path
             links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", document.read_text(encoding="utf-8"))
@@ -56,9 +58,16 @@ class ProjectFilesTests(unittest.TestCase):
             "README.md",
         ):
             with self.subTest(path=relative_path):
-                source = (PROJECT_ROOT / relative_path).read_text(encoding="utf-8")
+                source = (ENGINEERING_ROOT / relative_path).read_text(encoding="utf-8")
                 self.assertIn("法学论衡", source)
                 self.assertNotIn("律稿", source)
+
+    def test_project_top_level_has_five_clear_entries(self):
+        entries = {path.name for path in PROJECT_ROOT.iterdir() if not path.name.startswith(".")}
+        self.assertEqual(entries, {"README.md", "AGENTS.md", "应用工程", "设计资料", "历史归档"})
+        for name in ("apps", "packages", "config", "tests", "scripts"):
+            with self.subTest(directory=name):
+                self.assertTrue((ENGINEERING_ROOT / name).is_dir())
 
     def test_version_delivery_rules_are_documented(self):
         instructions = (PROJECT_ROOT / "AGENTS.md").read_text(encoding="utf-8")
@@ -67,7 +76,7 @@ class ProjectFilesTests(unittest.TestCase):
         self.assertIn("git log --graph --oneline --decorate --all", instructions)
 
     def test_demo_contains_complete_document_and_app_entry(self):
-        source = (PROJECT_ROOT / "archive" / "法学论文审查助手-Demo.html").read_text(
+        source = (PROJECT_ROOT / "历史归档" / "法学论文审查助手-Demo.html").read_text(
             encoding="utf-8"
         )
         parser = DemoParser()
